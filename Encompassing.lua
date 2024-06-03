@@ -1,7 +1,7 @@
-
 Triggers = {}
 function Triggers.draw()
 
+  if TexturePalette.draw() then return end
   if Screen.term_active then return end
   if Player.dead then return end
   if not deja then return end
@@ -152,7 +152,6 @@ function Triggers.draw()
     
     if sec.type == "network statistics" then
       -- player list and rankings
-      local all_players = sorted_players()
       local gametype = Game.type
       if gametype == "netscript" then
         gametype = Game.scoring_mode
@@ -162,8 +161,7 @@ function Triggers.draw()
       local mx = inv_x + mw + dejawidth
       local mwh = mw + math.floor(dejawidth/2)
 
-      for i = 1,#all_players do
-        local p = all_players[i]
+      for idx, p in ipairs(sorted_players()) do
 
         -- background with player and team colors
         Screen.fill_rect(inv_x, inv_y, mwh, dejaheight,
@@ -172,7 +170,7 @@ function Triggers.draw()
                          colortable[p.color.mnemonic])
         
         -- ranking text
-        local score = ranking_text(gametype, p.ranking)
+        local score = player_ranking_text(gametype, p.ranking)
         local iw, ih = deja:measure_text(score)
         deja:draw_text(score, inv_x + mw - iw, inv_y, env_adjust_glow({ 1, 1, 1, 1}))
         
@@ -357,6 +355,8 @@ end
 
 function Triggers.resize()
 
+  if TexturePalette.resize() then return end
+
   Screen.clip_rect.width = Screen.width
   Screen.clip_rect.x = 0
   Screen.clip_rect.height = Screen.height
@@ -386,15 +386,16 @@ function Triggers.resize()
   sw = Screen.world_rect.width
   sh = Screen.world_rect.height
     
-  deja = Fonts.new{file = "Themes/Default/DejaVuLGCSansCondensed-Bold.ttf", size = sh / 48, style = 0}  
+  scale = sh/1080
+
+  deja = Fonts.new{file = "dejavu/DejaVuLGCSansCondensed-Bold.ttf", size = scale * 22.5, style = 0}
   dejawidth, dejaheight = deja:measure_text("  ")
   
-  blg = Fonts.new{file = "Themes/Default/bankgthd.ttf", size = sh / 24, style = 0}  
+  blg = Fonts.new{file = "squarishsans/Squarish_Sans_CT_Medium.ttf", size = scale * 45, style = 0}
   blgwidth, blgheight = blg:measure_text("  ")
-  bsm = Fonts.new{file = "Themes/Default/bankgthd.ttf", size = sh / 36, style = 0}  
+  bsm = Fonts.new{file = "squarishsans/Squarish_Sans_CT_Medium.ttf", size = scale * 30, style = 0}
   bsmwidth, bsmheight = bsm:measure_text("  ")
 
-  scale = sh/1080
   rescale(left_underlay)
   rescale(left_overlay)
   rescale(compass)
@@ -418,17 +419,17 @@ function Triggers.init()
                  blue   = { 0.0, 0.0, 0.8, 0.6 },
                  green  = { 0.0, 0.8, 0.0, 0.6 } }
   
-  left_underlay = Images.new{path = "Textures/Encompassing/left_underlay.png"}
-  left_overlay = Images.new{path = "Textures/Encompassing/left_overlay.png"}
-  compass = Images.new{path = "Textures/Encompassing/compass.png"}
-  northeast = Images.new{path = "Textures/Encompassing/northeast.png"}
-  southeast = Images.new{path = "Textures/Encompassing/southeast.png"}
-  northwest = Images.new{path = "Textures/Encompassing/northwest.png"}
-  southwest = Images.new{path = "Textures/Encompassing/southwest.png"}
-  right_underlay = Images.new{path = "Textures/Encompassing/right_underlay.png"}
-  right_overlay = Images.new{path = "Textures/Encompassing/right_overlay.png"}
-  top_underlay = Images.new{path = "Textures/Encompassing/top_underlay.png"}
-  top_overlay = Images.new{path = "Textures/Encompassing/top_overlay.png"}
+  left_underlay = Images.new{path = "resources/left_underlay.png"}
+  left_overlay = Images.new{path = "resources/left_overlay.png"}
+  compass = Images.new{path = "resources/compass.png"}
+  northeast = Images.new{path = "resources/northeast.png"}
+  southeast = Images.new{path = "resources/southeast.png"}
+  northwest = Images.new{path = "resources/northwest.png"}
+  southwest = Images.new{path = "resources/southwest.png"}
+  right_underlay = Images.new{path = "resources/right_underlay.png"}
+  right_overlay = Images.new{path = "resources/right_overlay.png"}
+  top_underlay = Images.new{path = "resources/top_underlay.png"}
+  top_overlay = Images.new{path = "resources/top_overlay.png"}
 
   Triggers.resize()
 end
@@ -455,15 +456,14 @@ end
 
 
 function format_time(ticks)
-   local secs = math.ceil(ticks / 30)
+   local secs = math.floor(ticks / 30)
    return string.format("%d:%02d", math.floor(secs / 60), secs % 60)
 end
 
 function net_header()
   if Game.time_remaining then
     return format_time(Game.time_remaining)
-  end
-  if Game.kill_limit then
+  elseif Game.kill_limit then
     local max_kills = 0
     for i = 1,#Game.players do
       max_kills = math.max(max_kills, Game.players[i - 1].kills)
@@ -473,43 +473,25 @@ function net_header()
   return nil
 end
 
-function ranking_text(gametype, ranking)
-  if (gametype == "kill monsters") or
-     (gametype == "capture the flag") or
-     (gametype == "rugby") or
-     (gametype == "most points") then
+function player_ranking_text(gametype, ranking)
+  if     gametype == "kill monsters" or
+         gametype == "capture the flag" or
+         gametype == "rugby" or
+         gametype == "most points" then
     return string.format("%d", ranking)
-  end
-  if (gametype == "least points") then
+  elseif gametype == "least points" then
     return string.format("%d", -ranking)
-  end
-  if (gametype == "cooperative play") then
+  elseif gametype == "cooperative play" then
     return string.format("%d%%", ranking)
-  end
-  if (gametype == "most time") or
-     (gametype == "least time") or
-     (gametype == "king of the hill") or
-     (gametype == "kill the man with the ball") or
-     (gametype == "defense") or
-     (gametype == "tag") then
+  elseif gametype == "most time" or
+         gametype == "least time" or
+         gametype == "king of the hill" or
+         gametype == "kill the man with the ball" or
+         gametype == "defense" or
+         gametype == "tag" then
     return format_time(math.abs(ranking))
   end
-  
-  -- unknown
   return nil
-end
-
-function comp_player(a, b)
-  if a.ranking > b.ranking then
-    return true
-  end
-  if a.ranking < b.ranking then
-    return false
-  end
-  if a.name < b.name then
-    return true
-  end
-  return false
 end
 
 function sorted_players()
@@ -517,7 +499,11 @@ function sorted_players()
   for i = 1,#Game.players do
     table.insert(tbl, Game.players[i - 1])
   end
-  table.sort(tbl, comp_player)
+  local sortfunc = function(a, b)
+    if a.ranking ~= b.ranking then return a.ranking > b.ranking end
+    return a.index < b.index
+  end
+  table.sort(tbl, sortfunc)
   return tbl
 end
 
@@ -589,3 +575,164 @@ function env_adjust_glow(color)
   return color
 end
 
+-- BEGIN texture palette utility
+--
+-- Use: in Triggers.draw: "if TexturePalette.draw() then return end"
+--    in Triggers.resize: "if TexturePalette.resize() then return end"
+
+TexturePalette = {}
+TexturePalette.active = false
+
+function TexturePalette.check_active()
+  local old_active = TexturePalette.active
+  local new_active = false
+  if Player.texture_palette.size > 0 then new_active = true end
+  TexturePalette.active = new_active
+
+  if old_active and not new_active then
+    Screen.crosshairs.lua_hud = TexturePalette.saved_crosshairs_lua_hud
+    Triggers.resize()
+  elseif new_active and not old_active then
+    TexturePalette.palette_cache = {}
+    TexturePalette.saved_crosshairs_lua_hud = Screen.crosshairs.lua_hud
+    Screen.crosshairs.lua_hud = false
+    TexturePalette.resize()
+  end
+  return TexturePalette.active
+end
+
+function TexturePalette.get_shape(slot)
+  local key = string.format("%d %d", slot.collection, slot.texture_index)
+  local shp = TexturePalette.palette_cache[key]
+  if not shp then
+    shp = Shapes.new{collection = slot.collection, texture_index = slot.texture_index, type = slot.type}
+    TexturePalette.palette_cache[key] = shp
+  end
+  return shp
+end
+
+function TexturePalette.draw_shape(slot, x, y, size)
+  local shp = TexturePalette.get_shape(slot)
+  if not shp then return end
+  if shp.width > shp.height then
+    shp:rescale(size, shp.unscaled_height * size / shp.unscaled_width)
+    shp:draw(x, y + (size - shp.height)/2)
+  else
+    shp:rescale(shp.unscaled_width * size / shp.unscaled_height, size)
+    shp:draw(x + (size - shp.width)/2, y)
+  end
+end
+
+function TexturePalette.draw(hr)
+  if not TexturePalette.check_active() then return false end
+
+  local hr = TexturePalette.hud_rect
+  local tcount = Player.texture_palette.size
+  local size
+  if     tcount <=   5 then size = 128
+  elseif tcount <=  16 then size =  80
+  elseif tcount <=  36 then size =  53
+  elseif tcount <=  64 then size =  40
+  elseif tcount <= 100 then size =  32
+  elseif tcount <= 144 then size =  26
+  else                      size =  20
+  end
+  size = size * hr.scale
+
+  local rows = math.floor(hr.height/size)
+  local cols = math.floor(hr.width/size)
+  local x_offset = hr.x + (hr.width - cols * size)/2
+  local y_offset = hr.y + (hr.height - rows * size)/2
+
+  for i = 0,tcount - 1 do
+    TexturePalette.draw_shape(
+      Player.texture_palette.slots[i],
+      (i % cols) * size + x_offset + hr.scale/2,
+      math.floor(i / cols) * size + y_offset + hr.scale/2,
+      size - hr.scale)
+  end
+
+  if Player.texture_palette.highlight then
+    local i = Player.texture_palette.highlight
+    Screen.frame_rect(
+      (i % cols) * size + x_offset,
+      math.floor(i / cols) * size + y_offset,
+      size, size,
+      InterfaceColors["inventory text"],
+      hr.scale)
+  end
+
+  return true
+end
+
+function TexturePalette.resize()
+  if not TexturePalette.check_active() then return false end
+
+  local ww = Screen.width
+  local wh = Screen.height
+
+  -- calculate HUD area
+  TexturePalette.hud_rect = {}
+  local hudsize = Screen.hud_size_preference
+  TexturePalette.hud_rect.width = 640
+  if hudsize == SizePreferences["double"] then
+    if wh >= 960 and ww >= 1280 then
+      TexturePalette.hud_rect.width = 1280
+    end
+  elseif hudsize == SizePreferences["largest"] then
+    TexturePalette.hud_rect.width = math.min(ww, math.max(640, (4 * wh) / 3));
+  end
+
+  TexturePalette.hud_rect.height = TexturePalette.hud_rect.width / 4
+  TexturePalette.hud_rect.x = math.floor((ww - TexturePalette.hud_rect.width) / 2)
+  TexturePalette.hud_rect.y = math.floor(wh - TexturePalette.hud_rect.height)
+
+  TexturePalette.hud_rect.scale = TexturePalette.hud_rect.width / 640
+
+  -- remove HUD height from rest of calculations
+  wh = TexturePalette.hud_rect.y
+
+  -- calculate terminal area
+  local termsize = Screen.term_size_preference
+  Screen.term_rect.width = 640
+  if termsize == SizePreferences["double"] then
+    if wh >= 640 and ww >= 1280 then
+      Screen.term_rect.width = 1280
+    end
+  elseif termsize == SizePreferences["largest"] then
+    Screen.term_rect.width = math.min(ww, math.max(640, 2 * wh))
+  end
+
+  Screen.term_rect.height = Screen.term_rect.width / 2
+  Screen.term_rect.x = math.floor((ww - Screen.term_rect.width) / 2)
+  Screen.term_rect.y = math.floor((wh - Screen.term_rect.height) / 2)
+
+  -- calculate world-view area
+  Screen.world_rect.width = math.min(ww, math.max(640, 2 * wh))
+  Screen.world_rect.height = Screen.world_rect.width / 2
+  Screen.world_rect.x = math.floor((ww - Screen.world_rect.width) / 2)
+  Screen.world_rect.y = math.floor((wh - Screen.world_rect.height) / 2)
+
+  -- calculate map area
+  if Screen.map_overlay_active then
+    -- overlay just matches world-view
+    Screen.map_rect.width = Screen.world_rect.width
+    Screen.map_rect.height = Screen.world_rect.height
+    Screen.map_rect.x = Screen.world_rect.x
+    Screen.map_rect.y = Screen.world_rect.y
+  else
+    Screen.map_rect.width = ww
+    Screen.map_rect.height = wh
+    Screen.map_rect.x = 0
+    Screen.map_rect.y = 0
+  end
+
+  Screen.clip_rect.width = Screen.width
+  Screen.clip_rect.height = Screen.height
+  Screen.clip_rect.x = 0
+  Screen.clip_rect.y = 0
+
+  return true
+end
+
+-- END texture palette utility

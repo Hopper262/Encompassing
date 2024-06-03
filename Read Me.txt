@@ -1,0 +1,18 @@
+Encompassing v1.0
+-----------------
+by Hopper
+
+----------------------------------------------------------------
+DESCRIPTION:
+A straightforward floating HUD with a compass (in OpenGL mode). Originally built to test Aleph One's Lua HUD engine during its development.
+
+----------------------------------------------------------------
+INSTALLATION:
+- Drag the downloaded .zip file, or the unzipped "Encompassing" folder, into the "Plugins" folder inside your scenario folder. (Create a "Plugins" folder if you don't already have one.)
+- Launch Aleph One, and go to "Preferences", then "Environment", then "Plugins" and make sure the plugin is listed as "Enabled". You can click on it to turn it on or off. Disable any other HUD plugins you have installed.
+
+----------------------------------------------------------------
+CHANGELOG:
+
+v1.0:
+* First public release

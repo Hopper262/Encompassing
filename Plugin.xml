@@ -1,0 +1,2 @@
+<plugin name="Encompassing" version="1.0" description="Floating HUD with compass" hud_lua="Encompassing.lua">
+</plugin>
